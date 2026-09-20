@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseForRequest } from "@/lib/serverSupabase";
 import { embedTexts, streamAnswer } from "@/lib/ai";
+import { enforceRateLimit, CHAT_RULES } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -13,6 +14,9 @@ const SYSTEM = `You answer questions about a document using ONLY the context pro
 export async function POST(req: Request) {
   const { sb, user } = await supabaseForRequest(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const limited = await enforceRateLimit(sb, CHAT_RULES);
+  if (limited) return limited;
 
   const { documentId, question } = await req.json();
   if (!documentId || typeof question !== "string" || !question.trim() || question.length > 1000) {
