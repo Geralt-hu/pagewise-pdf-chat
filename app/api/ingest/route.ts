@@ -3,6 +3,7 @@ import { extractText, getDocumentProxy } from "unpdf";
 import { supabaseForRequest } from "@/lib/serverSupabase";
 import { chunkPages } from "@/lib/chunk";
 import { embedTexts } from "@/lib/ai";
+import { enforceRateLimit, INGEST_RULES } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -13,10 +14,17 @@ export async function POST(req: Request) {
   const { sb, user } = await supabaseForRequest(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const limited = await enforceRateLimit(sb, INGEST_RULES);
+  if (limited) return limited;
+
   const { documentId } = await req.json();
   const { data: doc, error: docErr } = await sb
     .from("documents").select("*").eq("id", documentId).single();
   if (docErr || !doc) return NextResponse.json({ error: "Document not found" }, { status: 404 });
+
+  if (doc.status !== "processing") {
+    return NextResponse.json({ error: "Document was already processed" }, { status: 409 });
+  }
 
   try {
     const { data: file, error: dlErr } = await sb.storage.from("pdfs").download(doc.storage_path);
