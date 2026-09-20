@@ -136,6 +136,8 @@ function Dashboard({ userId }: { userId: string }) {
   const [busy, setBusy] = useState(false);
   const [drag, setDrag] = useState(false);
   const [error, setError] = useState("");
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function load() {
     const { data } = await supabase
@@ -144,6 +146,30 @@ function Dashboard({ userId }: { userId: string }) {
     setDocs(data ?? []);
   }
   useEffect(() => { load(); }, []);
+
+  async function removeDoc(id: string) {
+    setError("");
+    setDeletingId(id);
+    try {
+      const { data: doc, error: fetchErr } = await supabase
+        .from("documents").select("storage_path").eq("id", id).single();
+      if (fetchErr || !doc) throw new Error("Document not found");
+
+      // 1. delete the file, 2. delete the row (chunks are removed automatically)
+      const { error: storageErr } = await supabase.storage.from("pdfs").remove([doc.storage_path]);
+      if (storageErr) throw new Error(storageErr.message);
+
+      const { error: delErr } = await supabase.from("documents").delete().eq("id", id);
+      if (delErr) throw new Error(delErr.message);
+
+      setDocs((d) => d.filter((x) => x.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete the document");
+    } finally {
+      setDeletingId(null);
+      setConfirmId(null);
+    }
+  }
 
   async function handleFile(file: File) {
     if (busy) return;
@@ -233,6 +259,28 @@ function Dashboard({ userId }: { userId: string }) {
                   <Link href={`/chat/${d.id}`} className="rounded-lg bg-accent px-3.5 py-1.5 text-sm font-medium text-accent-ink transition hover:opacity-90">
                     Open chat
                   </Link>
+                )}
+                {confirmId === d.id ? (
+                  <span className="flex items-center gap-2 text-sm">
+                    <button
+                      disabled={deletingId === d.id}
+                      onClick={() => removeDoc(d.id)}
+                      className="rounded-lg bg-danger px-3 py-1.5 font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+                    >
+                      {deletingId === d.id ? "Deleting…" : "Yes, delete"}
+                    </button>
+                    <button onClick={() => setConfirmId(null)} className="text-muted hover:text-ink">
+                      Cancel
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setConfirmId(d.id)}
+                    className="text-sm text-muted transition hover:text-danger"
+                    aria-label={`Remove ${d.name}`}
+                  >
+                    Remove
+                  </button>
                 )}
               </div>
             </li>
