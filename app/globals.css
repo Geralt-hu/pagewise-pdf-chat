@@ -1,6 +1,38 @@
 @import "tailwindcss";
 
+/* ============================================================
+   THEME: Wildflowers (default, light)
+   Change the values below to experiment.
+   ============================================================ */
 :root {
+  --paper: #f5faf4;        /* page background */
+  --card: #ffffff;         /* cards and inputs */
+  --ink: #1b2b1f;          /* main text */
+  --muted: #40594a;        /* secondary text */
+  --line: #c3dcc5;         /* borders */
+  --accent: #2b7233;       /* buttons, links (darker shade of swatch #509753) */
+  --accent-ink: #ffffff;   /* text on accent buttons */
+  --accent-soft: #dcf0dd;  /* light green chips and highlights */
+  --danger: #a53a28;
+  --danger-soft: #f6dcd8;  /* pink tint */
+  --warn: #6f3f75;         /* "Processing" pill uses the lilac family */
+  --warn-soft: #eddcef;
+
+  /* login panel background */
+  --hero-glow-1: rgba(168, 220, 171, 0.55); /* mint */
+  --hero-glow-2: rgba(189, 146, 191, 0.35); /* lilac */
+  --hero-glow-3: rgba(219, 170, 166, 0.4);  /* pink */
+  --hero-base-1: #eef8ee;
+  --hero-base-2: #f5faf4;
+
+  color-scheme: light;
+}
+
+/* ============================================================
+   THEME: Blue eclipse (dark). Turn it on by adding
+   data-theme="eclipse" to the <html> tag in app/layout.tsx
+   ============================================================ */
+:root[data-theme="eclipse"] {
   --paper: #0f0e47;
   --card: #282657;
   --ink: #ecebf7;
@@ -13,6 +45,14 @@
   --danger-soft: #4a1f3f;
   --warn: #f2cf86;
   --warn-soft: #3f3a2c;
+
+  --hero-glow-1: rgba(134, 133, 173, 0.28);
+  --hero-glow-2: rgba(82, 80, 129, 0.5);
+  --hero-glow-3: rgba(0, 0, 0, 0);
+  --hero-base-1: #282657;
+  --hero-base-2: #0f0e47;
+
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -32,10 +72,6 @@
   --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
 }
 
-html {
-  color-scheme: dark;
-}
-
 body {
   background: var(--paper);
   color: var(--ink);
@@ -44,7 +80,7 @@ body {
 }
 
 ::selection {
-  background: var(--line);
+  background: var(--accent-soft);
   color: var(--ink);
 }
 
@@ -66,7 +102,7 @@ body {
   }
 }
 
-/* Keep browser autofill from turning inputs white */
+/* Keep browser autofill from changing input colors */
 input:-webkit-autofill,
 input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--ink);
@@ -78,9 +114,10 @@ input:-webkit-autofill:focus {
 /* Left panel of the login page */
 .hero-bg {
   background:
-    radial-gradient(60% 50% at 15% 8%, rgba(134, 133, 173, 0.28) 0%, transparent 70%),
-    radial-gradient(55% 45% at 95% 95%, rgba(82, 80, 129, 0.5) 0%, transparent 70%),
-    linear-gradient(160deg, #282657 0%, #0f0e47 100%);
+    radial-gradient(55% 45% at 12% 8%, var(--hero-glow-1) 0%, transparent 70%),
+    radial-gradient(50% 45% at 95% 25%, var(--hero-glow-2) 0%, transparent 70%),
+    radial-gradient(60% 50% at 65% 100%, var(--hero-glow-3) 0%, transparent 70%),
+    linear-gradient(160deg, var(--hero-base-1) 0%, var(--hero-base-2) 100%);
 }
 
 @keyframes rise {
