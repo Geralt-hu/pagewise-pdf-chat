@@ -23,6 +23,40 @@ export default function Home() {
 
 /* ---------------------------- Auth ---------------------------- */
 
+const FEATURES = [
+  {
+    title: "Upload any PDF",
+    text: "Notes, papers, syllabi or reports, up to 10 MB.",
+    icon: (
+      <>
+        <path d="M12 16V4M7 9l5-5 5 5" />
+        <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+      </>
+    ),
+  },
+  {
+    title: "Answers with citations",
+    text: "Every answer names the page it came from, so you can check it.",
+    icon: (
+      <>
+        <path d="M6 3h8l4 4v14H6z" />
+        <path d="M14 3v4h4" />
+        <path d="M9 14l2 2 4-4" />
+      </>
+    ),
+  },
+  {
+    title: "Private by default",
+    text: "Your files and chats are visible only to your account.",
+    icon: (
+      <>
+        <rect x="5" y="11" width="14" height="9" rx="2" />
+        <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+      </>
+    ),
+  },
+];
+
 function AuthForm() {
   const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
@@ -44,23 +78,50 @@ function AuthForm() {
   }
 
   return (
-    <main className="grid min-h-screen lg:grid-cols-2">
-      <aside className="relative hidden flex-col justify-between bg-accent p-12 text-accent-ink lg:flex">
-        <Brand inverted />
-        <div className="rise">
-          <h1 className="font-display text-5xl leading-[1.05] tracking-tight">
+    <main className="grid min-h-screen md:grid-cols-2">
+      {/* Left half: what Pagewise is */}
+      <aside className="hero-bg relative hidden flex-col justify-between gap-12 overflow-hidden p-10 md:flex lg:p-14">
+        <Brand />
+
+        <div className="rise max-w-lg">
+          <p className="mb-5 inline-block rounded-full border border-line px-3 py-1 text-xs uppercase tracking-widest text-muted">
+            PDF Q&amp;A with citations
+          </p>
+          <h1 className="font-display text-4xl leading-[1.05] tracking-tight lg:text-5xl">
             Ask your documents anything.
           </h1>
-          <p className="mt-5 max-w-md text-lg opacity-80">
-            Upload a PDF and get answers with the exact page cited, so you can check every claim yourself.
+          <p className="mt-5 text-lg text-muted">
+            Upload a PDF and chat with it. Pagewise finds the relevant passages and answers from them, with the exact page cited.
           </p>
+
+          <ul className="mt-9 space-y-5">
+            {FEATURES.map((f) => (
+              <li key={f.title} className="flex gap-4">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line bg-card/60 text-accent">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    {f.icon}
+                  </svg>
+                </span>
+                <div>
+                  <p className="font-medium">{f.title}</p>
+                  <p className="text-sm text-muted">{f.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
-        <p className="text-sm opacity-60">Built with Next.js, Supabase and pgvector.</p>
+
+        <p className="text-sm text-muted">Built with Next.js, Supabase and pgvector.</p>
       </aside>
 
+      {/* Right half: login */}
       <section className="flex items-center justify-center px-6 py-12">
         <div className="rise w-full max-w-sm">
-          <div className="mb-10 lg:hidden"><Brand /></div>
+          <div className="mb-10 md:hidden">
+            <Brand />
+            <p className="mt-3 text-sm text-muted">Upload a PDF and ask it questions. Every answer cites its page.</p>
+          </div>
+
           <h2 className="font-display text-3xl tracking-tight">
             {mode === "in" ? "Welcome back" : "Create your account"}
           </h2>
@@ -74,7 +135,7 @@ function AuthForm() {
               <input
                 type="email" required autoComplete="email"
                 value={email} onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-xl border border-line bg-card px-4 py-3 outline-none transition focus:border-accent"
+                className="w-full rounded-xl border border-line bg-card px-4 py-3 text-ink outline-none transition focus:border-accent"
               />
             </label>
             <label className="block">
@@ -83,7 +144,7 @@ function AuthForm() {
                 type="password" required minLength={6}
                 autoComplete={mode === "in" ? "current-password" : "new-password"}
                 value={password} onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-line bg-card px-4 py-3 outline-none transition focus:border-accent"
+                className="w-full rounded-xl border border-line bg-card px-4 py-3 text-ink outline-none transition focus:border-accent"
               />
             </label>
             <button
@@ -265,7 +326,7 @@ function Dashboard({ userId }: { userId: string }) {
                     <button
                       disabled={deletingId === d.id}
                       onClick={() => removeDoc(d.id)}
-                      className="rounded-lg bg-danger px-3 py-1.5 font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+                      className="rounded-lg bg-danger px-3 py-1.5 font-medium text-paper transition hover:opacity-90 disabled:opacity-60"
                     >
                       {deletingId === d.id ? "Deleting…" : "Yes, delete"}
                     </button>
