@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #f6f1e7;
-  --card: #fcfaf4;
-  --ink: #1d1b16;
-  --muted: #6b665b;
-  --line: #ddd5c3;
-  --accent: #1f5c4a;
-  --accent-ink: #f6f1e7;
-  --accent-soft: #dceae2;
-  --danger: #b3412f;
-  --danger-soft: #f4ddd7;
-  --warn: #7a5b10;
-  --warn-soft: #f3e6c4;
+  --paper: #0f0e47;
+  --card: #282657;
+  --ink: #ecebf7;
+  --muted: #9c9ac2;
+  --line: #3a3870;
+  --accent: #a9a8d0;
+  --accent-ink: #0f0e47;
+  --accent-soft: #2f2c66;
+  --danger: #ff9a8b;
+  --danger-soft: #4a1f3f;
+  --warn: #f2cf86;
+  --warn-soft: #3f3a2c;
 }
 
 @theme inline {
@@ -33,7 +33,7 @@
 }
 
 html {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 body {
@@ -44,12 +44,43 @@ body {
 }
 
 ::selection {
-  background: var(--accent-soft);
+  background: var(--line);
+  color: var(--ink);
 }
 
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Tailwind v4 removed the pointer cursor from buttons, so restore it */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  summary,
+  select {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+/* Keep browser autofill from turning inputs white */
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink);
+  caret-color: var(--ink);
+  box-shadow: 0 0 0 1000px var(--card) inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* Left panel of the login page */
+.hero-bg {
+  background:
+    radial-gradient(60% 50% at 15% 8%, rgba(134, 133, 173, 0.28) 0%, transparent 70%),
+    radial-gradient(55% 45% at 95% 95%, rgba(82, 80, 129, 0.5) 0%, transparent 70%),
+    linear-gradient(160deg, #282657 0%, #0f0e47 100%);
 }
 
 @keyframes rise {
