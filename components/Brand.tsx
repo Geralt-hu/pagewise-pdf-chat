@@ -1,9 +1,11 @@
+import Link from "next/link";
+
 export default function Brand({ inverted = false }: { inverted?: boolean }) {
   return (
-    <div className="flex items-center gap-2.5">
+    <Link href="/" aria-label="Pagewise home" className="group flex w-fit items-center gap-2.5">
       <span
-        className={`grid h-8 w-8 place-items-center rounded-lg ${
-          inverted ? "bg-accent-ink text-accent" : "bg-accent text-accent-ink"
+        className={`grid h-8 w-8 place-items-center rounded-lg transition group-hover:scale-105 ${
+          inverted ? "bg-ink text-paper" : "bg-accent text-accent-ink"
         }`}
       >
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -13,6 +15,6 @@ export default function Brand({ inverted = false }: { inverted?: boolean }) {
         </svg>
       </span>
       <span className="font-display text-xl tracking-tight">Pagewise</span>
-    </div>
+    </Link>
   );
 }
