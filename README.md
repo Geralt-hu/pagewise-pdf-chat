@@ -1,130 +1,109 @@
-# Pagewise PDF Chat
+# Pagewise
 
-A production-grade, full-stack RAG (Retrieval-Augmented Generation) platform enabling conversational interactions with multi-page PDF documents. Features page-level chunking, vector similarity search via `pgvector`, streaming LLM responses, and an integrated PDF viewer with synchronized citation jumping.
+A full-stack RAG (retrieval-augmented generation) app for chatting with PDFs. Upload a document, ask questions, and every answer cites the page it came from. Clicking a citation jumps the built-in PDF viewer to that page, so answers can be checked against the source.
 
-🌐 **Live Demo:** [pagewise-pdf-chat.vercel.app](https://pagewise-pdf-chat.vercel.app/)  
-📂 **Repository:** [github.com/Geralt-hu/pagewise-pdf-chat](https://github.com/Geralt-hu/pagewise-pdf-chat)
+**Live demo:** [pagewise-pdf-chat.vercel.app](https://pagewise-pdf-chat.vercel.app/)
 
----
+## Features
 
-## Architecture Overview
-[User Browser]
-│
-├── (Upload PDF) ───────► Next.js /api/ingest
-│                             │
-│                             ├──► Supabase Storage (Private bucket)
-│                             ├──► PDF Parsing & Page-aware Chunking
-│                             ├──► Google Gemini API (Text Embeddings)
-│                             └──► Supabase Postgres (pgvector embeddings + metadata)
-│
-└── (Streaming Query) ──► Next.js /api/chat
-│
-├──► Supabase Postgres (Cosine Similarity Match via pgvector)
-├──► Context-injected Prompt Construction
-└──► Google Gemini API (Streamed Completion + Page Citations)
+- **Page-aware retrieval.** Text is extracted page by page and chunked so every chunk keeps its page number. Questions are matched against chunks with pgvector cosine similarity.
+- **Cited answers.** The model is instructed to answer only from the retrieved context and to cite pages like `[p. 3]`. Citations render as clickable chips.
+- **Synced PDF viewer.** Chat on one side, the PDF on the other. Clicking a citation opens the PDF at that page.
+- **Streaming responses.** Answers stream token by token from Gemini through a Next.js route handler.
+- **Per-user data isolation.** Supabase Auth, row-level security on every table, and private per-user file storage.
+- **Document management.** Upload progress with a status for each document (processing, ready, failed), and a remove button that deletes the file, its chunks and its embeddings.
+- **Abuse protection.** Per-user rate limiting on the chat and ingest endpoints, plus retry with backoff and an optional fallback model for temporary API errors.
 
----
+## How it works
 
-## Key Features
-
-- **Asynchronous Ingestion Pipeline:** Uploads documents directly to secure cloud storage, extracts structured text per page, chunks content, generates vector embeddings, and tracks indexing status in real time.
-- **Page-Level Vector Retrieval:** Queries are matched against document segments using `pgvector` cosine similarity, preserving original page numbers for precise source attribution.
-- **Synchronized PDF Viewer:** Side-by-side split screen interface where clicking on inline source citations automatically jumps the built-in PDF viewer to the exact cited page.
-- **Real-Time Response Streaming:** Low-latency conversational feedback using Next.js streaming API routes and Gemini generative AI streaming tokens.
-- **Multi-Tenant Security:** Strict multi-user data isolation enforced at the database level using Supabase Row-Level Security (RLS) and isolated Supabase Storage buckets.
-
----
-
-## System Stack & Layer Breakdown
-
-| Layer | Technologies & Implementation |
-| :--- | :--- |
-| **Frontend** | **Next.js (App Router), React, TypeScript, Tailwind CSS**<br>• Supabase Auth UI integration<br>• Asynchronous upload manager with indexing status indicators<br>• Real-time SSE/ReadableStream chat interface<br>• Embedded PDF reader with programmatic page-jump controls |
-| **Backend & APIs** | **Next.js Route Handlers**<br>• `/api/ingest`: Handles PDF extraction, chunking heuristics, embedding dispatch, and vector storage<br>• `/api/chat`: Performs vector similarity queries, dynamic prompt assembly, and token streaming |
-| **Database & Vector Store** | **Supabase Postgres + `pgvector`**<br>• Relational schemas for users, documents, and chunk metadata<br>• `vector` data types for high-dimensional vector search using cosine distance (`<=>`) |
-| **Security & Auth** | **Supabase Auth & Storage**<br>• Email/password authentication flow<br>• Database-level **Row-Level Security (RLS)** ensuring users only query their own documents<br>• Authenticated per-user private file storage policies |
-| **AI & Embeddings** | **Google Gemini API**<br>• Vector embeddings for document chunks and user queries<br>• Conversational model for streaming generative synthesis with citations |
-| **Deployment** | **Vercel** (Edge / Serverless infrastructure) |
-
----
-
-## Engineering Design Decisions
-
-### 1. Document Chunking Strategy
-Instead of generic naive character splitting, the ingestion pipeline splits text while strictly maintaining page-level metadata. This guarantees that every retrieved chunk retains its exact page origin, eliminating source hallucination and enabling direct document-viewer synchronization.
-
-### 2. Database-Level Isolation (RLS)
-Security is enforced at the database engine level using Postgres Row-Level Security rather than solely relying on application middleware:
-```sql
--- Example RLS Policy pattern used on document chunks
-CREATE POLICY "Users can only query their own document vectors"
-ON document_chunks
-FOR SELECT
-USING (auth.uid() = user_id);
 ```
-Even if a vector search query executes across the entire table, Postgres enforces that the user cannot retrieve or calculate similarity against another tenant's vector embeddings.
+Browser (Next.js + React)
+  |
+  |-- Upload PDF --> Supabase Storage (private bucket, one folder per user)
+  |        '------> POST /api/ingest
+  |                   |- extract text page by page
+  |                   |- split into overlapping chunks (page number kept)
+  |                   |- embed chunks with Gemini
+  |                   '- store vectors in Postgres (pgvector)
+  |
+  '-- Ask a question --> POST /api/chat
+                          |- embed the question
+                          |- match_chunks(): top 5 chunks by cosine similarity
+                          |- build a prompt from the retrieved chunks
+                          '- stream Gemini's answer back with page citations
+```
 
-3. Streaming Retrieval-Augmented Generation
-To minimize Time to First Token (TTFT), the /api/chat route pipes streaming tokens directly back over HTTP as they are yielded from the Gemini model, reducing perceptible latency compared to traditional blocking responses.
+## Tech stack
 
-Getting Started
-Prerequisites
-Node.js: v18.0.0 or later
+| Layer | Technology |
+| :--- | :--- |
+| Frontend | Next.js (App Router), React, TypeScript, Tailwind CSS |
+| API | Next.js route handlers: `/api/ingest` and `/api/chat` |
+| Database | Supabase Postgres with the `pgvector` extension |
+| Auth and storage | Supabase Auth (email and password), Supabase Storage |
+| AI | Google Gemini API (embeddings and answer generation) |
+| Hosting | Vercel |
 
-Package Manager: npm, pnpm, or yarn
+## Design decisions
 
-Supabase Account: Configured project with pgvector extension enabled
+**Page-level chunking.** Each page is split on its own, so a chunk never spans two pages and always has an exact page number. This is what makes page citations and the viewer jump possible. Chunks are about 2,000 characters with 300 characters of overlap, so a sentence cut at a boundary still appears whole in one chunk.
 
-Google Gemini API Key: Access to Gemini models and embedding endpoints
+**Security enforced in the database.** Access control lives in Postgres row-level security instead of only in application code. The API routes forward the user's token, so every query runs as that user and the policies apply to it:
 
-Environment Setup
-Create a .env.local file in the project root:
+```sql
+create policy "own chunks" on chunks for all
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+```
 
-Code snippet
-# Next.js / Public
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+The `match_chunks` similarity function runs as the calling user, not as a privileged role, so a search can never return another user's vectors. Storage policies restrict each user to their own folder in the `pdfs` bucket.
 
-# Backend Secrets
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-GEMINI_API_KEY=your_google_gemini_api_key
-Installation & Local Run
-Clone the repository:
+**Rate limiting in Postgres.** On Vercel each request may run on a different server instance, so an in-memory counter would not work. A Postgres function (`check_rate_limit`) increments a per-user counter atomically with `insert ... on conflict do update`, so concurrent requests cannot slip past the limit. Limits are set in `lib/rateLimit.ts`.
 
-Bash
-git clone [https://github.com/Geralt-hu/pagewise-pdf-chat.git](https://github.com/Geralt-hu/pagewise-pdf-chat.git)
-cd pagewise-pdf-chat
-Install dependencies:
+**Resilience against API errors.** Calls to Gemini are retried with exponential backoff on 429 and 5xx errors, embeddings are sent in small batches with pauses to stay under quotas, and a fallback chat model can be configured.
 
-Bash
-npm install
-Start the local development server:
+## Known limitations
 
-Bash
-npm run dev
-Navigate to http://localhost:3000 to access the app.
+- Scanned PDFs have no text layer, so they are rejected. They would need an OCR step.
+- Ingestion runs inside one serverless request (60-second limit), so uploads are capped at 10 MB and 200 pages. Larger files would need resumable batch ingestion or a background queue.
+- Each question is answered on its own, without chat history, so follow-ups like "explain that more" lack context.
+- Retrieval uses the top 5 chunks, which suits specific questions better than whole-document tasks such as summaries.
+- Citations come from the model and are not verified automatically, so they reduce hallucination but do not eliminate it.
 
-Deployment
-Vercel
-Push your repository to GitHub.
+## Getting started
 
-Import the project in the Vercel Dashboard.
+**Prerequisites:** Node.js 20.9 or later (required by Next.js 16), a Supabase project, and a Gemini API key from Google AI Studio.
 
-Configure all variables defined in .env.local under Project Settings > Environment Variables.
+1. Clone and install:
 
-Deploy the application.
+   ```bash
+   git clone https://github.com/Geralt-hu/pagewise-pdf-chat.git
+   cd pagewise-pdf-chat
+   npm install
+   ```
 
-License
-Distributed under the MIT License.
+2. In the Supabase dashboard, open the SQL Editor and run `supabase/schema.sql`. It creates the tables, the pgvector index, the `match_chunks` function, the row-level security policies and the private storage bucket. Then run `supabase/rate_limit.sql` for the rate limiter.
 
+3. Create `.env.local` in the project root:
 
----
+   ```dotenv
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   GEMINI_API_KEY=your-gemini-api-key
 
-### Update It on GitHub
+   # Optional: model names (check Google's docs for current ones)
+   EMBED_MODEL=gemini-embedding-001
+   CHAT_MODEL=gemini-3.6-flash
+   CHAT_FALLBACK_MODEL=
+   ```
 
-Replace your local `README.md` contents with the above text and run:
+   The app does not need the Supabase service role key. Never put it in this project.
 
-```bash
-git add README.md
-git commit -m "docs: document full-stack architecture, RAG pipeline, and technical specs"
-git push origin main
+4. Start the dev server and open [http://localhost:3000](http://localhost:3000):
+
+   ```bash
+   npm run dev
+   ```
+
+## Deployment
+
+Push the repository to GitHub, import it into Vercel, and add the same environment variables under **Project Settings, Environment Variables**. After the first deploy, set your Vercel URL as the **Site URL** in Supabase under **Authentication, URL Configuration**.
